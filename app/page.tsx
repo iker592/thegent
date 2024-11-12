@@ -1,12 +1,9 @@
-"use client";
+import KnowledgeGraph from '@/components/knowledge-graph'
 
-import React from 'react';
-import { Calendar } from '@/components/ui/calendar';
-
-export default function App() {
+export default function Page() {
   return (
     <div>
-      <Calendar />
+      <KnowledgeGraph />
     </div>
-  );
+  )
 }
