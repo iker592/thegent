@@ -570,17 +570,16 @@ export default function KnowledgeGraph() {
       <div className="flex-grow flex relative">
         <main className={`flex-1 p-4 transition-all duration-300 ease-in-out ${!isSidebarOpen ? 'mr-0' : 'mr-96'}`}>
           <div className="relative">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarOpen(!isSidebarOpen)}
-              className="absolute top-4 right-4 z-10 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white"
-            >
-              {isSidebarOpen ? 
-                <PanelRightClose className="h-5 w-5" /> : 
+            {!isSidebarOpen && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(true)}
+                className="absolute top-4 right-4 z-10 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white"
+              >
                 <PanelRightOpen className="h-5 w-5" />
-              }
-            </Button>
+              </Button>
+            )}
             <div ref={networkRef} className="w-full h-[calc(100vh-8rem)] bg-gray-800 rounded-lg shadow-xl dark:bg-gray-800" />
           </div>
         </main>
@@ -596,9 +595,19 @@ export default function KnowledgeGraph() {
         >
           <div className="p-4 border-b border-gray-700 dark:border-gray-700">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-indigo-300 dark:text-indigo-300">
-                {selectedNode ? selectedNode.label : 'Select a node'}
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-semibold text-indigo-300 dark:text-indigo-300">
+                  {selectedNode ? selectedNode.label : 'Select a node'}
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSidebarOpen(false)}
+                  className="text-gray-300 hover:text-white"
+                >
+                  <PanelRightClose className="h-5 w-5" />
+                </Button>
+              </div>
               {nodeHistory.length > 1 && (
                 <Button variant="ghost" size="sm" onClick={handleBackClick}>
                   <ChevronLeft className="h-4 w-4 mr-1" />
