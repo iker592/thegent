@@ -6,7 +6,20 @@ import { DataSet } from 'vis-data'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Brain, MessageSquare, BookOpen, Compass, Search, User, ChevronRight, ChevronLeft, Moon, Sun } from 'lucide-react'
+import { 
+  Brain, 
+  MessageSquare, 
+  BookOpen, 
+  Compass, 
+  Search, 
+  User, 
+  ChevronRight, 
+  ChevronLeft, 
+  Moon, 
+  Sun,
+  PanelRightOpen,
+  PanelRightClose 
+} from 'lucide-react'
 import { Separator } from "@/components/ui/separator"
 import { useTheme } from 'next-themes'
 
@@ -342,293 +355,325 @@ const mockData: { [key: string]: Node } = {
 }
 
 export default function KnowledgeGraph() {
-const networkRef = useRef<HTMLDivElement>(null)
-const [selectedNode, setSelectedNode] = useState<Node | null>(null)
-const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(["root", "tech", "science", "business", "fitness"]))
-const [network, setNetwork] = useState<Network | null>(null)
-const [highlightedNode, setHighlightedNode] = useState<string | null>(null)
-const [nodeHistory, setNodeHistory] = useState<string[]>([])
-const { theme, setTheme } = useTheme()
+  const networkRef = useRef<HTMLDivElement>(null)
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null)
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(["root", "tech", "science", "business", "fitness"]))
+  const [network, setNetwork] = useState<Network | null>(null)
+  const [highlightedNode, setHighlightedNode] = useState<string | null>(null)
+  const [nodeHistory, setNodeHistory] = useState<string[]>([])
+  const { theme, setTheme } = useTheme()
+  const [isSidebarOpen, setSidebarOpen] = useState(true)
 
-useEffect(() => {
-  setTheme('dark')
-}, [])
+  useEffect(() => {
+    setTheme('dark')
+  }, [])
 
-useEffect(() => {
-  if (!networkRef.current) return
+  useEffect(() => {
+    if (!networkRef.current) return
 
-  const nodes = new DataSet(
-    Array.from(expandedNodes).map(id => {
-      const node = mockData[id]
-      if (!node) return null
-      return {
-        id,
-        label: id === "root" ? "" : node.label,
-        color: id === "root" 
-          ? { background: '#6366f1', border: '#4f46e5' }
-          : {
-              background: id === highlightedNode ? '#3b82f6' : '#1e293b',
-              border: id === highlightedNode ? '#2563eb' : '#475569',
-              highlight: { background: '#3b82f6', border: '#2563eb' }
-            },
-        font: { color: '#e2e8f0', size: 16, face: 'Inter, sans-serif' },
-        shape: id === "root" ? "dot" : "box",
-        size: id === "root" ? 20 : 30,
-      }
-    }).filter(node => node !== null)
-  )
+    const nodes = new DataSet(
+      Array.from(expandedNodes).map(id => {
+        const node = mockData[id]
+        if (!node) return null
+        return {
+          id,
+          label: id === "root" ? "" : node.label,
+          color: id === "root" 
+            ? { background: '#6366f1', border: '#4f46e5' }
+            : {
+                background: id === highlightedNode ? '#3b82f6' : '#1e293b',
+                border: id === highlightedNode ? '#2563eb' : '#475569',
+                highlight: { background: '#3b82f6', border: '#2563eb' }
+              },
+          font: { color: '#e2e8f0', size: 16, face: 'Inter, sans-serif' },
+          shape: id === "root" ? "dot" : "box",
+          size: id === "root" ? 20 : 30,
+        }
+      }).filter(node => node !== null)
+    )
 
-  const edges = new DataSet(
-    Array.from(expandedNodes).flatMap(id => {
-      const node = mockData[id]
-      if (!node || !node.children) return []
-      return node.children
-        .filter(childId => expandedNodes.has(childId) && mockData[childId])
-        .map(childId => ({
-          id: `${id}-${childId}`,
-          from: id,
-          to: childId,
-          color: highlightedNode === id 
-            ? { color: '#3b82f6', highlight: '#3b82f6', hover: '#3b82f6' }
-            : { color: '#64748b', highlight: '#3b82f6', hover: '#3b82f6' },
-          width: 2,
-          smooth: { enabled: true, type: 'cubicBezier', roundness: 0.5 }
-        }))
-    })
-  )
+    const edges = new DataSet(
+      Array.from(expandedNodes).flatMap(id => {
+        const node = mockData[id]
+        if (!node || !node.children) return []
+        return node.children
+          .filter(childId => expandedNodes.has(childId) && mockData[childId])
+          .map(childId => ({
+            id: `${id}-${childId}`,
+            from: id,
+            to: childId,
+            color: highlightedNode === id 
+              ? { color: '#3b82f6', highlight: '#3b82f6', hover: '#3b82f6' }
+              : { color: '#64748b', highlight: '#3b82f6', hover: '#3b82f6' },
+            width: 2,
+            smooth: { enabled: true, type: 'cubicBezier', roundness: 0.5 }
+          }))
+      })
+    )
 
-  const data = { nodes, edges }
+    const data = { nodes, edges }
 
-  const options = {
-    nodes: {
-      margin: { top: 10, right: 10, bottom: 10, left: 10 },
-      borderWidth: 2,
-      shadow: true,
-    },
-    edges: {
-      smooth: { enabled: true, type: 'cubicBezier', roundness: 0.5 },
-      color: {
-        inherit: false,
-        highlight: '#3b82f6',
-        hover: '#3b82f6'
-      }
-    },
-    layout: {
-      improvedLayout: true,
-      randomSeed: 42,
-    },
-    physics: {
-      forceAtlas2Based: {
-        gravitationalConstant: -50,
-        centralGravity: 0.01,
-        springConstant: 0.08,
-        springLength: 100,
-        damping: 0.4,
-        avoidOverlap: 0.8
+    const options = {
+      nodes: {
+        margin: { top: 10, right: 10, bottom: 10, left: 10 },
+        borderWidth: 2,
+        shadow: true,
       },
-      maxVelocity: 50,
-      solver: 'forceAtlas2Based',
-      timestep: 0.35,
-      stabilization: { iterations: 150 }
-    },
-    interaction: { 
-      hover: true,
-      hoverConnectedEdges: true,
-      selectConnectedEdges: true
+      edges: {
+        smooth: { enabled: true, type: 'cubicBezier', roundness: 0.5 },
+        color: {
+          inherit: false,
+          highlight: '#3b82f6',
+          hover: '#3b82f6'
+        }
+      },
+      layout: {
+        improvedLayout: true,
+        randomSeed: 42,
+      },
+      physics: {
+        forceAtlas2Based: {
+          gravitationalConstant: -50,
+          centralGravity: 0.01,
+          springConstant: 0.08,
+          springLength: 100,
+          damping: 0.4,
+          avoidOverlap: 0.8
+        },
+        maxVelocity: 50,
+        solver: 'forceAtlas2Based',
+        timestep: 0.35,
+        stabilization: { iterations: 150 }
+      },
+      interaction: { 
+        hover: true,
+        hoverConnectedEdges: true,
+        selectConnectedEdges: true
+      }
     }
-  }
 
-  try {
-    const newNetwork = new Network(networkRef.current, data, options)
-    setNetwork(newNetwork)
+    try {
+      const newNetwork = new Network(networkRef.current, data, options)
+      setNetwork(newNetwork)
 
-    newNetwork.on('click', (params) => {
-      if (params.nodes.length > 0) {
-        const nodeId = params.nodes[0] as string
-        const node = mockData[nodeId]
-        if (!node) return
+      newNetwork.on('click', (params) => {
+        if (params.nodes.length > 0) {
+          const nodeId = params.nodes[0] as string
+          const node = mockData[nodeId]
+          if (!node) return
 
-        if (nodeId === "root") {
-          setExpandedNodes(new Set(["root", ...mockData.root.children || []]))
+          if (nodeId === "root") {
+            setExpandedNodes(new Set(["root", ...mockData.root.children || []]))
+            setSelectedNode(null)
+            setHighlightedNode(null)
+            setNodeHistory([])
+          } else {
+            setSelectedNode(node)
+            setHighlightedNode(nodeId)
+            setNodeHistory(prev => [...prev, nodeId])
+            
+            if (node.children?.length) {
+              setExpandedNodes(prev => {
+                const newSet = new Set(prev)
+                node.children!.forEach(childId => newSet.add(childId))
+                return newSet
+              })
+            }
+          }
+        } else {
           setSelectedNode(null)
           setHighlightedNode(null)
-          setNodeHistory([])
-        } else {
-          setSelectedNode(node)
-          setHighlightedNode(nodeId)
-          setNodeHistory(prev => [...prev, nodeId])
-          
-          if (node.children?.length) {
-            setExpandedNodes(prev => {
-              const newSet = new Set(prev)
-              node.children!.forEach(childId => newSet.add(childId))
-              return newSet
-            })
-          }
         }
-      } else {
-        setSelectedNode(null)
-        setHighlightedNode(null)
-      }
-    })
-  } catch (error) {
-    console.error("Error initializing network:", error)
-  }
-
-  return () => {
-    if (network) {
-      network.destroy()
-    }
-  }
-}, [expandedNodes, highlightedNode, theme])
-
-const handleNodeClick = (nodeId: string) => {
-  const node = mockData[nodeId]
-  if (node) {
-    setSelectedNode(node)
-    setHighlightedNode(nodeId)
-    setNodeHistory(prev => [...prev, nodeId])
-    if (node.children?.length) {
-      setExpandedNodes(prev => {
-        const newSet = new Set(prev)
-        node.children!.forEach(childId => newSet.add(childId))
-        return newSet
       })
+    } catch (error) {
+      console.error("Error initializing network:", error)
     }
-    network?.selectNodes([nodeId])
+
+    return () => {
+      if (network) {
+        network.destroy()
+      }
+    }
+  }, [expandedNodes, highlightedNode, theme])
+
+  const handleNodeClick = (nodeId: string) => {
+    const node = mockData[nodeId]
+    if (node) {
+      setSelectedNode(node)
+      setHighlightedNode(nodeId)
+      setNodeHistory(prev => [...prev, nodeId])
+      if (node.children?.length) {
+        setExpandedNodes(prev => {
+          const newSet = new Set(prev)
+          node.children!.forEach(childId => newSet.add(childId))
+          return newSet
+        })
+      }
+      network?.selectNodes([nodeId])
+    }
   }
-}
 
-const handleBackClick = () => {
-  if (nodeHistory.length > 1) {
-    const newHistory = [...nodeHistory]
-    newHistory.pop() // Remove current node
-    const previousNodeId = newHistory[newHistory.length - 1]
-    setNodeHistory(newHistory)
-    handleNodeClick(previousNodeId)
+  const handleBackClick = () => {
+    if (nodeHistory.length > 1) {
+      const newHistory = [...nodeHistory]
+      newHistory.pop() // Remove current node
+      const previousNodeId = newHistory[newHistory.length - 1]
+      setNodeHistory(newHistory)
+      handleNodeClick(previousNodeId)
+    }
   }
-}
 
-const toggleTheme = () => {
-  setTheme(theme === 'dark' ? 'light' : 'dark')
-}
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark')
+  }
 
-return (
-  <div className="min-h-screen flex flex-col bg-gray-900 text-gray-100 dark:bg-gray-900 dark:text-gray-100">
-    <header className="bg-gray-800 border-b border-gray-700 dark:bg-gray-800 dark:border-gray-700">
-      <div className="container mx-auto px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-8">
-            <div className="flex items-center space-x-2">
-              <Brain className="h-8 w-8 text-indigo-400" />
-              <span className="text-2xl font-bold text-indigo-400">thegent</span>
+  return (
+    <div className="min-h-screen flex flex-col bg-gray-900 text-gray-100 dark:bg-gray-900 dark:text-gray-100">
+      <header className="bg-gray-800 border-b border-gray-700 dark:bg-gray-800 dark:border-gray-700">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-8">
+              <div className="flex items-center space-x-2">
+                <Brain className="h-8 w-8 text-indigo-400" />
+                <span className="text-2xl font-bold text-indigo-400">thegent</span>
+              </div>
+              <nav className="hidden md:flex items-center space-x-1">
+                <Button variant="ghost" className="text-gray-300 hover:text-white dark:text-gray-300 dark:hover:text-white">
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Chat
+                </Button>
+                <Button variant="ghost" className="text-gray-300 hover:text-white dark:text-gray-300 dark:hover:text-white">
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  Resources
+                </Button>
+                <Button variant="ghost" className="text-gray-300 hover:text-white dark:text-gray-300 dark:hover:text-white">
+                  <Compass className="mr-2 h-4 w-4" />
+                  Explore
+                </Button>
+              </nav>
             </div>
-            <nav className="hidden md:flex items-center space-x-1">
-              <Button variant="ghost" className="text-gray-300 hover:text-white dark:text-gray-300 dark:hover:text-white">
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Chat
+            <div className="flex items-center space-x-4">
+              <Button variant="ghost" size="icon" className="text-gray-300 hover:text-white dark:text-gray-300 dark:hover:text-white">
+                <Search className="h-5 w-5" />
               </Button>
-              <Button variant="ghost" className="text-gray-300 hover:text-white dark:text-gray-300 dark:hover:text-white">
-                <BookOpen className="mr-2 h-4 w-4" />
-                Resources
+              <Button variant="ghost" size="icon" className="text-gray-300 hover:text-white dark:text-gray-300 dark:hover:text-white">
+                <User className="h-5 w-5" />
               </Button>
-              <Button variant="ghost" className="text-gray-300 hover:text-white dark:text-gray-300 dark:hover:text-white">
-                <Compass className="mr-2 h-4 w-4" />
-                Explore
+              <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-gray-300 hover:text-white dark:text-gray-300 dark:hover:text-white">
+                {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </Button>
-            </nav>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="icon" className="text-gray-300 hover:text-white dark:text-gray-300 dark:hover:text-white">
-              <Search className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="text-gray-300 hover:text-white dark:text-gray-300 dark:hover:text-white">
-              <User className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-gray-300 hover:text-white dark:text-gray-300 dark:hover:text-white">
-              {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </Button>
+            </div>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
 
-    <div className="flex-grow flex">
-      <main className="flex-1 p-4">
-        <div ref={networkRef} className="w-full h-[calc(100vh-8rem)] bg-gray-800 rounded-lg shadow-xl dark:bg-gray-800" />
-      </main>
-
-      <aside className="w-96 border-l border-gray-700 bg-gray-800 overflow-hidden flex flex-col dark:border-gray-700 dark:bg-gray-800">
-        <div className="p-4 border-b border-gray-700 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-indigo-300 dark:text-indigo-300">
-              {selectedNode ? selectedNode.label : 'Select a node'}
-            </h2>
-            {nodeHistory.length > 1 && (
-              <Button variant="ghost" size="sm" onClick={handleBackClick}>
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Back
+      <div className="flex-grow flex relative">
+        <main className={`flex-1 p-4 transition-all duration-300 ease-in-out ${!isSidebarOpen ? 'mr-0' : 'mr-96'}`}>
+          <div className="relative">
+            {!isSidebarOpen && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(true)}
+                className="absolute top-4 right-4 z-10 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white"
+              >
+                <PanelRightOpen className="h-5 w-5" />
               </Button>
             )}
+            <div ref={networkRef} className="w-full h-[calc(100vh-8rem)] bg-gray-800 rounded-lg shadow-xl dark:bg-gray-800" />
           </div>
-          {selectedNode && (
-            <p className="text-sm text-gray-400 mt-1 dark:text-gray-400">
-              {selectedNode.resources.length} resources available
-            </p>
-          )}
-        </div>
-        <ScrollArea className="flex-1 p-4">
-          {selectedNode ? (
-            <div className="space-y-4">
-              {selectedNode.resources.map((resource) => (
-                <Card key={resource.id} className="bg-gray-900 border-gray-700 dark:bg-gray-900 dark:border-gray-700">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-medium">
-                      <Button
-                        variant="link"
-                        className="text-blue-400 hover:text-blue-300 p-0 h-auto font-medium dark:text-blue-400 dark:hover:text-blue-300"
-                        onClick={() => window.open(resource.url, '_blank')}
-                      >
-                        {resource.title}
-                        <ChevronRight className="h-4 w-4 ml-1 inline" />
-                      </Button>
-                    </CardTitle>
-                    {resource.description && (
-                      <CardDescription className="text-gray-400 dark:text-gray-400">
-                        {resource.description}
-                      </CardDescription>
-                    )}
-                  </CardHeader>
-                </Card>
-              ))}
-              {selectedNode.children && selectedNode.children.length > 0 && (
-                <div className="mt-6">
-                  <h3 className="text-lg font-semibold text-indigo-300 mb-2 dark:text-indigo-300">Subnodes</h3>
-                  {selectedNode.children.map((childId) => {
-                    const childNode = mockData[childId]
-                    if (!childNode) return null
-                    return (
-                      <Button
-                        key={childId}
-                        variant="ghost"
-                        className="w-full justify-start text-left mb-2 text-gray-300 hover:text-white dark:text-gray-300 dark:hover:text-white"
-                        onClick={() => handleNodeClick(childId)}
-                      >
-                        {childNode.label}
-                      </Button>
-                    )
-                  })}
-                </div>
+        </main>
+
+        <aside 
+          className={`
+            w-96 border-l border-gray-700 bg-gray-800 overflow-hidden flex flex-col 
+            dark:border-gray-700 dark:bg-gray-800
+            transition-transform duration-300 ease-in-out
+            fixed right-0 top-[4rem] bottom-0
+            ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'}
+          `}
+        >
+          <div className="p-4 border-b border-gray-700 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-semibold text-indigo-300 dark:text-indigo-300">
+                  {selectedNode ? selectedNode.label : 'Select a node'}
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSidebarOpen(false)}
+                  className="text-gray-300 hover:text-white"
+                >
+                  <PanelRightClose className="h-5 w-5" />
+                </Button>
+              </div>
+              {nodeHistory.length > 1 && (
+                <Button variant="ghost" size="sm" onClick={handleBackClick}>
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Back
+                </Button>
               )}
             </div>
-          ) : (
-            <div className="text-center text-gray-400 mt-8 dark:text-gray-400">
-              <p>Select a node from the graph to view its resources</p>
-            </div>
-          )}
-        </ScrollArea>
-      </aside>
+            {selectedNode && (
+              <p className="text-sm text-gray-400 mt-1 dark:text-gray-400">
+                {selectedNode.resources.length} resources available
+              </p>
+            )}
+          </div>
+          
+          <ScrollArea className="flex-1 p-4">
+            {selectedNode ? (
+              <div className="space-y-4">
+                {selectedNode.resources.map((resource) => (
+                  <Card key={resource.id} className="bg-gray-900 border-gray-700 dark:bg-gray-900 dark:border-gray-700">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg font-medium">
+                        <Button
+                          variant="link"
+                          className="text-blue-400 hover:text-blue-300 p-0 h-auto font-medium dark:text-blue-400 dark:hover:text-blue-300"
+                          onClick={() => window.open(resource.url, '_blank')}
+                        >
+                          {resource.title}
+                          <ChevronRight className="h-4 w-4 ml-1 inline" />
+                        </Button>
+                      </CardTitle>
+                      {resource.description && (
+                        <CardDescription className="text-gray-400 dark:text-gray-400">
+                          {resource.description}
+                        </CardDescription>
+                      )}
+                    </CardHeader>
+                  </Card>
+                ))}
+                {selectedNode.children && selectedNode.children.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-lg font-semibold text-indigo-300 mb-2 dark:text-indigo-300">Subnodes</h3>
+                    {selectedNode.children.map((childId) => {
+                      const childNode = mockData[childId]
+                      if (!childNode) return null
+                      return (
+                        <Button
+                          key={childId}
+                          variant="ghost"
+                          className="w-full justify-start text-left mb-2 text-gray-300 hover:text-white dark:text-gray-300 dark:hover:text-white"
+                          onClick={() => handleNodeClick(childId)}
+                        >
+                          {childNode.label}
+                        </Button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center text-gray-400 mt-8 dark:text-gray-400">
+                <p>Select a node from the graph to view its resources</p>
+              </div>
+            )}
+          </ScrollArea>
+        </aside>
+      </div>
     </div>
-  </div>
-)
+  )
 }
